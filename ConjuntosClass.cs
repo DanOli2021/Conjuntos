@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace Conjuntos
 {
@@ -267,63 +269,95 @@ namespace Conjuntos
 }
 
 
-public class BayesNode
+public class Bayes
 {
-    public double data;
-    public BayesNode A = null;
-    public BayesNode B = null;
-    public string NodeName;
 
-    public enum NodeType
+    public Dictionary<string, BayesNode> nodes = new Dictionary<string, BayesNode>();
+    public decimal TotalProbability { get; set; }
+    public string problem;
+
+    public Bayes(string problem)
     {
-        A,
-        B
+        this.problem = problem;
     }
-    
-    public string AddBayesNode(string NodeNameA, string NodeNameB, double data)        
+
+    public string AddBayesNode(string NodeName, double probality, double probability_dependency)        
     {
 
-        if (data >= 1) 
+        if (probality >= 1) 
         {
-            return "Error: The value of data must always be less than 1.";
+            return "Error: The value of probality must always be less than 1.";
         }
 
-        if (string.IsNullOrEmpty(NodeNameA)) 
+        if (probability_dependency >= 1)
+        {
+            return "Error: The value of probability_dependency must always be less than 1.";
+        }
+
+        if (string.IsNullOrEmpty(NodeName)) 
         {
             return "Error: The NodeNameA parameter must not be an empty string";
         }
 
-        if (string.IsNullOrEmpty(NodeNameB))
+        BayesNode node = new BayesNode();
+
+        node.NodeName = NodeName;
+        node.Probality = probality;
+        node.ProbalityDependency = probability_dependency;
+
+        if (!nodes.ContainsKey(NodeName))
         {
-            return "Error: The NodeNameB parameter must not be an empty string";
+            this.nodes.Add(NodeName, node);
         }
-
-        if (NodeNameA.Trim().ToLower() == NodeNameB.Trim().ToLower())
+        else
         {
-            return "Error: NodeNameA and nodeNameB parameters must not be the same";
+            this.nodes[NodeName] =  node;
         }
-
-        this.A = new BayesNode();
-        this.A.data = data;
-        this.A.NodeName = NodeNameA;
-
-        this.B = new BayesNode();
-        this.B.data = 1 - data;
-        this.B.NodeName = NodeNameB;
 
         return "Ok.";
     }
 
-    public double CalculateProbability() 
+
+    public double CalculationTotalProbability() 
     {
-         if (this.A is null) return this.data;
-         return this.data * CalculateProbability();
+
+        double total = 0;
+
+        foreach (string key in nodes.Keys)
+        {
+            total += nodes[key].Probality * nodes[key].ProbalityDependency;
+        }
+        
+        return total;
+    }
+
+
+    public string CalculationTotalProbabilityDependency() 
+    {
+
+        double total = CalculationTotalProbability();
+        Dictionary<string, object> data = new Dictionary<string, object>();
+
+        foreach (string key in this.nodes.Keys)
+        {
+            double dependency = (nodes[key].Probality * nodes[key].ProbalityDependency) / total;
+            nodes[key].ProbalityResult = dependency;
+        }
+
+        return "Ok.";
+        
     }
 
 }
 
 
-//Bayes' theorem algorithm
+public class BayesNode
+{
+    public string NodeName { get; set; }
+    public double Probality { get; set; }
+    public double ProbalityDependency { get; set; }
+    public double ProbalityResult { get; set; }
+}
 
 
 public class ConsoleWriter : TextWriter
